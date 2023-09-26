@@ -68,6 +68,16 @@ const Home: NextPage = () => {
           Login via google
         </button>
         <span className="">{account}</span>
+        <button
+          onClick={async () => {
+            await axios.post(`/api/send-eth`, {
+              socialId: socialId,
+              socialType: socialType,
+            });
+          }}
+        >
+          Send 1 ETH
+        </button>
       </main>
 
       <footer className={styles.footer}>

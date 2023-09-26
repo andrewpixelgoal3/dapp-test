@@ -47,11 +47,11 @@ export default async function (req: NextApiRequest, res: NextApiResponse<any>) {
     wallet
   );
 
-  var tx = await accountContract.populateTransaction.setSpendingLimit(
-    ETH_ADDRESS,
-    BigNumber.from("10"),
-    { value: BigNumber.from("0") }
-  );
+  var tx: any = {
+    to: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    value: ethers.utils.parseEther("1"),
+    data: "0x",
+  };
   tx = {
     ...tx,
     from: account_address,
