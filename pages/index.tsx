@@ -8,6 +8,7 @@ import { EIP712Signer, Provider, types, utils } from "zksync-web3";
 import React, { useState } from "react";
 import { providers } from "ethers";
 import { GoogleLogin, googleLogout, useGoogleLogin } from "@react-oauth/google";
+import { useSession, signIn, signOut } from 'next-auth/react';
 
 const Home: NextPage = () => {
   const [account, setAccount] = useState<string>("");
@@ -19,10 +20,7 @@ const Home: NextPage = () => {
     chainId: publicClient.chain.id,
   });
   const setLimit = async () => {
-    const transaction = await axios.post(`/api/limit`, {
-      socialId: socialId,
-      socialType: socialType,
-    });
+    const transaction = await axios.post(`/api/limit`, {});
   };
 
   const googleLogin = useGoogleLogin({
@@ -46,6 +44,28 @@ const Home: NextPage = () => {
       }
     },
   });
+
+  const test = useGoogleLogin({
+    onSuccess: async (response) => {
+      console.log("token", response)
+      const userInfo = await axios.get(
+        "https://www.googleapis.com/oauth2/v3/userinfo",
+        {
+          headers: { Authorization: `Bearer ${response.access_token}` },
+        }
+      );
+      console.log("user info", userInfo)
+      const aa = await axios.post("/api/jwt-aa", {
+        socialId: userInfo.data.sub,
+        socialType: "1",
+      });
+      
+      if (aa.data) {
+        setAccount(aa.data.data.account);
+        localStorage.setItem('accessToken', aa.data.data.access_token);
+      }
+    }
+  })
   return (
     <div className={styles.container}>
       <Head>
@@ -70,13 +90,21 @@ const Home: NextPage = () => {
         <span className="">{account}</span>
         <button
           onClick={async () => {
-            await axios.post(`/api/send-eth`, {
-              socialId: socialId,
-              socialType: socialType,
+            const access_token = localStorage.getItem('accessToken');
+            await axios.post(`/api/send-eth`, {}, {
+              headers: { authorization: `Bearer ${access_token}` }
             });
           }}
         >
           Send 1 ETH
+        </button>
+
+        <button
+          onClick={() => {
+            test();
+          }}
+        >
+          Next Auth Login
         </button>
       </main>
 

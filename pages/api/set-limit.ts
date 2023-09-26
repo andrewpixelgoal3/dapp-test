@@ -1,11 +1,11 @@
+/* eslint-disable import/no-anonymous-default-export */
 import { ethers } from "ethers";
 import { NextApiRequest, NextApiResponse } from "next";
 import { Provider, utils } from "zksync-web3";
+import withAuth from "./middleware/authMiddleware";
 
-export default async function (req: NextApiRequest, res: NextApiResponse<any>) {
+export default withAuth(async function (req: NextApiRequest, res: NextApiResponse<any>) {
   try {
-    console.log("req.body: ", req.body);
-
     const tx = req.body.tx;
 
     const signature = ethers.utils.arrayify(
@@ -26,4 +26,4 @@ export default async function (req: NextApiRequest, res: NextApiResponse<any>) {
   } catch (error) {
     throw error;
   }
-}
+})

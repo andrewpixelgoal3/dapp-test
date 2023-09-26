@@ -1,3 +1,4 @@
+/* eslint-disable import/no-anonymous-default-export */
 import { NextApiRequest, NextApiResponse } from "next";
 import AAFactory from "../../abi/AAFactory.json";
 import TestAccount from "../../abi/TestAccount.json";
@@ -32,7 +33,6 @@ export default async function (req: NextApiRequest, res: NextApiResponse<any>) {
     // console.log("walletBalance: ", walletBalance);
 
     // console.log("process.env.FACTORY_ADDRESS: ", process.env.FACTORY_ADDRESS);
-
     const factory = new ethers.Contract(
       process.env.FACTORY_ADDRESS || "",
       AAFactory.abi,

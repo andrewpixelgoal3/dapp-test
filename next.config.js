@@ -10,7 +10,7 @@ const nextConfig = {
     FACTORY_ADDRESS: process.env.FACTORY_ADDRESS,
     SECRET: process.env.SECRET,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
-  },
+  }
 };
 
 module.exports = nextConfig;
