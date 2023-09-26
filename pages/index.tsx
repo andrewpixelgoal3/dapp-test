@@ -3,9 +3,14 @@ import type { NextPage } from "next";
 import Head from "next/head";
 import styles from "../styles/Home.module.css";
 import axios from "axios";
-import { type WalletClient, usePublicClient, useWalletClient } from "wagmi";
+import {
+  type WalletClient,
+  usePublicClient,
+  useWalletClient,
+  useAccount,
+} from "wagmi";
 import { EIP712Signer, Provider, types, utils } from "zksync-web3";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { providers } from "ethers";
 import { GoogleLogin, googleLogout, useGoogleLogin } from "@react-oauth/google";
 
@@ -15,6 +20,7 @@ const Home: NextPage = () => {
   const [socialType, setSocialType] = useState<string>("");
   const { data } = useWalletClient();
   const publicClient = usePublicClient();
+  const { isConnected } = useAccount();
   const signer = useEthersSigner({
     chainId: publicClient.chain.id,
   });
@@ -46,6 +52,19 @@ const Home: NextPage = () => {
       }
     },
   });
+  useEffect(() => {
+    console.log("isConnected: ", isConnected);
+    if (isConnected && data?.account.address) {
+      axios
+        .post(`/api/aa-eoa`, {
+          address: data?.account.address,
+        })
+        .then((response) => {
+          setAccount(response.data.data.account);
+        });
+    }
+  }, [isConnected, data]);
+
   return (
     <div className={styles.container}>
       <Head>
