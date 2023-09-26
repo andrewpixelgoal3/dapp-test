@@ -5,11 +5,14 @@ import styles from "../styles/Home.module.css";
 import axios from "axios";
 import { type WalletClient, usePublicClient, useWalletClient } from "wagmi";
 import { EIP712Signer, Provider, types, utils } from "zksync-web3";
-import React from "react";
+import React, { useState } from "react";
 import { providers } from "ethers";
 import { GoogleLogin, googleLogout, useGoogleLogin } from "@react-oauth/google";
 
 const Home: NextPage = () => {
+  const [account, setAccount] = useState<string>("");
+  const [socialId, setSocialId] = useState<string>("");
+  const [socialType, setSocialType] = useState<string>("");
   const { data } = useWalletClient();
   const publicClient = usePublicClient();
   const signer = useEthersSigner({
@@ -17,36 +20,8 @@ const Home: NextPage = () => {
   });
   const setLimit = async () => {
     const transaction = await axios.post(`/api/limit`, {
-      address: data?.account.address,
-    });
-    console.log("publicClient.chain.id:", publicClient.chain.id);
-
-    var tx = {
-      ...transaction.data.transaction,
-      from: transaction.data.account,
-      chainId: publicClient.chain.id,
-      nonce: await publicClient.getTransactionCount({
-        address: transaction.data.account,
-      }),
-      type: 113,
-      customData: {
-        gasPerPubdata: utils.DEFAULT_GAS_PER_PUBDATA_LIMIT,
-      } as types.Eip712Meta,
-    };
-    const provider = new Provider("http://localhost:3050");
-    tx.gasPrice = await provider.getGasPrice();
-    if (tx.gasLimit == undefined) {
-      tx.gasLimit = await provider.estimateGas(tx);
-    }
-    console.log("tx: ", tx);
-
-    const signedTxHash = EIP712Signer.getSignedDigest(tx);
-    const signature = await signer?.signMessage(signedTxHash);
-    console.log("signature: ", signature);
-
-    const setLimit = await axios.post(`/api/set-limit`, {
-      signature: signature,
-      tx: tx,
+      socialId: socialId,
+      socialType: socialType,
     });
   };
 
@@ -64,8 +39,11 @@ const Home: NextPage = () => {
         socialId: userInfo.data.sub,
         socialType: "1",
       });
-
-      console.log(userInfo);
+      if (aa.data) {
+        setAccount(aa.data.data.account);
+        setSocialId(aa.data.data.socialId);
+        setSocialType(aa.data.data.socialType);
+      }
     },
   });
   return (
@@ -89,13 +67,7 @@ const Home: NextPage = () => {
         >
           Login via google
         </button>
-        <button
-          onClick={() => {
-            googleLogout();
-          }}
-        >
-          Logout
-        </button>
+        <span className="">{account}</span>
       </main>
 
       <footer className={styles.footer}>

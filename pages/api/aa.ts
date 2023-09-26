@@ -1,10 +1,9 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import AAFactory from "../../abi/AAFactory.json";
 import TestAccount from "../../abi/TestAccount.json";
-import { Wallet, Contract, utils, Provider } from "zksync-web3";
+import { Wallet, utils, Provider } from "zksync-web3";
 import { ethers } from "ethers";
 import crypto from "crypto";
-import { solidityKeccak256 } from "ethers/lib/utils";
 
 export default async function (req: NextApiRequest, res: NextApiResponse<any>) {
   try {
@@ -23,7 +22,6 @@ export default async function (req: NextApiRequest, res: NextApiResponse<any>) {
       .createHash("sha256")
       .update(combinedBuffer)
       .digest("hex");
-    console.log("privateKey: ", privateKey);
 
     const provider = new Provider({
       url: "http://localhost:3050",
@@ -43,34 +41,32 @@ export default async function (req: NextApiRequest, res: NextApiResponse<any>) {
     // console.log("owner: ", owner);
 
     const salt = ethers.constants.HashZero;
-    await (
-      await factory.deployAccount(
-        salt,
-        owner.address,
-        solidityKeccak256(["string"], [socialId])
-      )
-    ).wait();
+    try {
+      await (await factory.deployAccount(salt, owner.address)).wait();
+    } catch (error) {
+      console.log("deployment failed, cause duplicate");
+    }
     const AbiCoder = new ethers.utils.AbiCoder();
     const account_address = utils.create2Address(
       factory.address,
       await factory.aaBytecodeHash(),
       salt,
-      AbiCoder.encode(
-        ["address", "bytes32"],
-        [owner.address, solidityKeccak256(["string"], [socialId])]
-      )
+      AbiCoder.encode(["address"], [owner.address])
     );
-    console.log("account_address: ", account_address);
 
     const accountContract = new ethers.Contract(
       account_address,
       TestAccount.abi,
       wallet
     );
-    console.log("accountContract: ", accountContract.address);
 
     res.status(200).json({
       success: true,
+      data: {
+        account: accountContract.address,
+        socialId: socialId,
+        socialType: socialType,
+      },
     });
   } catch (error) {
     throw error;

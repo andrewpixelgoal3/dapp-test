@@ -1,38 +1,44 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { BigNumber, ethers } from "ethers";
-import { Provider, Wallet, utils } from "zksync-web3";
+import { EIP712Signer, Provider, Wallet, types, utils } from "zksync-web3";
 import AAFactory from "../../abi/AAFactory.json";
 import TestAccount from "../../abi/TestAccount.json";
+import crypto from "crypto";
 import { solidityKeccak256 } from "ethers/lib/utils";
 
 export default async function (req: NextApiRequest, res: NextApiResponse<any>) {
   const ETH_ADDRESS = "0x000000000000000000000000000000000000800A";
-  const owner = req.body.address;
+  const socialId = req.body.socialId;
+  const socialType = req.body.socialType;
   const provider = new Provider("http://localhost:3050");
   const wallet = new Wallet(process.env.WALLET_PRIVATE_KEY || "", provider);
-  const walletBalance = await provider.getBalance(wallet.address);
-  console.log("walletBalance: ", walletBalance);
+  const combinedBuffer = Buffer.concat([
+    Buffer.from(process.env.SECRET || ""),
+    Buffer.from(socialId),
+    Buffer.from(socialType),
+  ]);
+  const privateKey = crypto
+    .createHash("sha256")
+    .update(combinedBuffer)
+    .digest("hex");
 
-  console.log("process.env.FACTORY_ADDRESS: ", process.env.FACTORY_ADDRESS);
+  const owner = new Wallet(privateKey, provider);
 
   const factory = new ethers.Contract(
     process.env.FACTORY_ADDRESS || "",
     AAFactory.abi,
     wallet
   );
-  console.log("owner: ", owner);
 
   const salt = ethers.constants.HashZero;
-  const social = solidityKeccak256(["string"], ["anhtrungnguyen94@gmail.com"]);
   // await (await factory.deployAccount(salt, owner, social)).wait();
-  console.log("run here 123");
 
   const AbiCoder = new ethers.utils.AbiCoder();
   const account_address = utils.create2Address(
     factory.address,
     await factory.aaBytecodeHash(),
     salt,
-    AbiCoder.encode(["address", "bytes32"], [owner, social])
+    AbiCoder.encode(["address"], [owner.address])
   );
 
   const accountContract = new ethers.Contract(
@@ -41,14 +47,39 @@ export default async function (req: NextApiRequest, res: NextApiResponse<any>) {
     wallet
   );
 
-  const tx = await accountContract.populateTransaction.setSpendingLimit(
+  var tx = await accountContract.populateTransaction.setSpendingLimit(
     ETH_ADDRESS,
     BigNumber.from("10"),
     { value: BigNumber.from("0") }
   );
+  tx = {
+    ...tx,
+    from: account_address,
+    chainId: (await provider.getNetwork()).chainId,
+    nonce: await provider.getTransactionCount(account_address),
+    type: 113,
+    customData: {
+      gasPerPubdata: utils.DEFAULT_GAS_PER_PUBDATA_LIMIT,
+    } as types.Eip712Meta,
+  };
+
+  tx.gasPrice = await provider.getGasPrice();
+  if (tx.gasLimit == undefined) {
+    tx.gasLimit = await provider.estimateGas(tx);
+  }
+
+  const signedTxHash = EIP712Signer.getSignedDigest(tx);
+  const signature = ethers.utils.arrayify(
+    ethers.utils.joinSignature(owner._signingKey().signDigest(signedTxHash))
+  );
+
+  tx.customData = {
+    ...tx.customData,
+    customSignature: signature,
+  };
   console.log("tx: ", tx);
+  await provider.sendTransaction(utils.serialize(tx));
   res.status(200).json({
-    transaction: tx,
-    account: accountContract.address,
+    success: true,
   });
 }
