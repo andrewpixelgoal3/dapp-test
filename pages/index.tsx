@@ -9,12 +9,14 @@ import {
   useWalletClient,
   useAccount,
 } from "wagmi";
-import { EIP712Signer, Provider, types, utils } from "zksync-web3";
+import { Provider } from "zksync-web3";
 import React, { useEffect, useState } from "react";
-import { providers } from "ethers";
-import { GoogleLogin, googleLogout, useGoogleLogin } from "@react-oauth/google";
+import { ethers, providers } from "ethers";
+import { useGoogleLogin } from "@react-oauth/google";
+import TestAccount from "../abi/TestAccount.json";
 
 const Home: NextPage = () => {
+  const ETH_ADDRESS = "0x000000000000000000000000000000000000800A";
   const [account, setAccount] = useState<string>("");
   const [socialId, setSocialId] = useState<string>("");
   const [socialType, setSocialType] = useState<string>("");
@@ -52,6 +54,31 @@ const Home: NextPage = () => {
       }
     },
   });
+
+  const sendEthFromEoa = async () => {
+    const accountContract = new ethers.Contract(
+      account,
+      TestAccount.abi,
+      signer
+    );
+    console.log("address: ", data?.account.address);
+    const estimateGas = await accountContract.estimateGas.testTransferFromEOA(
+      data?.account.address,
+      ethers.utils.parseEther("1")
+    );
+    console.log("estimateGas: ", estimateGas.toString());
+
+    await (
+      await accountContract.testTransferFromEOA(
+        data?.account.address,
+        ethers.utils.parseEther("1"),
+        {
+          gasPrice: await publicClient.getGasPrice(),
+          gasLimit: estimateGas,
+        }
+      )
+    ).wait();
+  };
   useEffect(() => {
     console.log("isConnected: ", isConnected);
     if (isConnected && data?.account.address) {
@@ -59,8 +86,14 @@ const Home: NextPage = () => {
         .post(`/api/aa-eoa`, {
           address: data?.account.address,
         })
-        .then((response) => {
+        .then(async (response) => {
           setAccount(response.data.data.account);
+          const accountContract = new ethers.Contract(
+            response.data.data.account,
+            TestAccount.abi,
+            signer
+          );
+          await (await accountContract.approveToken()).wait();
         });
     }
   }, [isConnected, data]);
@@ -97,6 +130,7 @@ const Home: NextPage = () => {
         >
           Send 1 ETH
         </button>
+        <button onClick={sendEthFromEoa}>Send 1 ETH from EOA</button>
       </main>
 
       <footer className={styles.footer}>
@@ -109,6 +143,8 @@ const Home: NextPage = () => {
 };
 
 export function walletClientToSigner(walletClient: WalletClient) {
+  // const { account, chain } = walletClient;
+  // const provider = new Provider(chain.rpcUrls.default.http[0]);
   const { account, chain, transport } = walletClient;
   const network = {
     chainId: chain.id,
