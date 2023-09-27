@@ -1,8 +1,10 @@
+/* eslint-disable import/no-anonymous-default-export */
 import { ethers } from "ethers";
 import { NextApiRequest, NextApiResponse } from "next";
 import { Provider, utils } from "zksync-web3";
+import requireAuth from "../../middleware/requireAuth";
 
-export default async function (req: NextApiRequest, res: NextApiResponse<any>) {
+export default requireAuth(async (req: NextApiRequest, res: NextApiResponse<any>, session: any) => {
   try {
     console.log("req.body: ", req.body);
 
@@ -26,4 +28,4 @@ export default async function (req: NextApiRequest, res: NextApiResponse<any>) {
   } catch (error) {
     throw error;
   }
-}
+})

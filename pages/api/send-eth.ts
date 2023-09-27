@@ -1,3 +1,4 @@
+/* eslint-disable import/no-anonymous-default-export */
 import { NextApiRequest, NextApiResponse } from "next";
 import { BigNumber, ethers } from "ethers";
 import { EIP712Signer, Provider, Wallet, types, utils } from "zksync-web3";
@@ -5,11 +6,13 @@ import AAFactory from "../../abi/AAFactory.json";
 import TestAccount from "../../abi/TestAccount.json";
 import crypto from "crypto";
 import { solidityKeccak256 } from "ethers/lib/utils";
+import requireAuth from "../../middleware/requireAuth";
 
-export default async function (req: NextApiRequest, res: NextApiResponse<any>) {
+export default requireAuth(async function (req: NextApiRequest, res: NextApiResponse<any>, session: any){
   const ETH_ADDRESS = "0x000000000000000000000000000000000000800A";
-  const socialId = req.body.socialId;
-  const socialType = req.body.socialType;
+  const { socialId, socialType } = session.user;
+  const { toAddress } = req.body;
+
   const provider = new Provider("http://localhost:3050");
   const wallet = new Wallet(process.env.WALLET_PRIVATE_KEY || "", provider);
   const combinedBuffer = Buffer.concat([
@@ -48,7 +51,7 @@ export default async function (req: NextApiRequest, res: NextApiResponse<any>) {
   );
 
   var tx: any = {
-    to: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    to: '0x5a61E9eCDc8407F21b43f5C3CA82DA68f3222a5C',
     value: ethers.utils.parseEther("1"),
     data: "0x",
   };
@@ -84,4 +87,4 @@ export default async function (req: NextApiRequest, res: NextApiResponse<any>) {
   res.status(200).json({
     success: true,
   });
-}
+})

@@ -13,7 +13,7 @@ import {
   zora,
 } from "wagmi/chains";
 import { publicProvider } from "wagmi/providers/public";
-import { GoogleOAuthProvider } from "@react-oauth/google";
+import { SessionProvider } from "next-auth/react";
 
 const zksyncLocal = {
   id: 270,
@@ -56,13 +56,13 @@ const wagmiConfig = createConfig({
   webSocketPublicClient,
 });
 
-function MyApp({ Component, pageProps }: AppProps) {
+function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
   return (
     <WagmiConfig config={wagmiConfig}>
       <RainbowKitProvider chains={chains}>
-        <GoogleOAuthProvider clientId={process.env.GOOGLE_CLIENT_ID || ""}>
-          <Component {...pageProps} />
-        </GoogleOAuthProvider>
+        <SessionProvider session={session}>
+            <Component {...pageProps} />
+        </SessionProvider>
       </RainbowKitProvider>
     </WagmiConfig>
   );
